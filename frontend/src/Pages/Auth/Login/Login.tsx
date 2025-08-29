@@ -11,14 +11,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import axios from "axios";
-import { AppRoutes } from "../../../constant/AppRoutes";
 
-export default function AuthForm() {
+export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
     email: "",
     password: "",
   });
@@ -30,35 +27,8 @@ export default function AuthForm() {
     });
   };
 
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    try {
-      const obj = {
-        userName: formData.name,
-        email: formData.email,
-        password: formData.password,
-      };
-      setIsLoading(true);
-      const response = await axios({
-        method: "POST",
-        url: AppRoutes.signup,
-        data: obj,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      console.log("Signup attempt:", response);
-        setFormData({
-      name: "",
-      email: "",
-      password: "",
-    });
-    } catch (error) {
-      console.error("Error during signup:", error);
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSubmit = async () => {
+    console.log("Signup attempt:", formData);
   };
 
   return (
@@ -103,28 +73,10 @@ export default function AuthForm() {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent mb-3">
                 ChatApp
               </h1>
-              <p className="text-white/70 text-lg">Join the conversation!</p>
             </div>
 
             {/* Form */}
-            <div >
-            <form onSubmit={handleSignUp} className="space-y-6">
-
-              <div className="group">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Full Name"
-                    className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
-                    required
-                  />
-                </div>
-              </div>
-
+            <div className="space-y-6">
               {/* Email Field */}
               <div className="group">
                 <div className="relative">
@@ -177,8 +129,8 @@ export default function AuthForm() {
 
               {/* Submit Button */}
               <button
+                onClick={handleSubmit}
                 disabled={isLoading}
-                type="submit"
                 className="w-full relative bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -189,24 +141,22 @@ export default function AuthForm() {
                   </div>
                 ) : (
                   <div className="flex items-center justify-center">
-                    Create Account
+                    Login
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </div>
                 )}
               </button>
-            </form>
-
             </div>
 
             {/* Toggle Form */}
             <div className="mt-8 text-center">
               <p className="text-white/70 mb-4 flex gap-2 justify-center">
-                Already have an account?{" "}
+                Don't have an account{" "}
                 <Link
-                  to="/login"
+                  to="/register"
                   className="text-light hover:text-light font-semibold transition-colors"
                 >
-                  Login
+                  Sign up
                 </Link>
               </p>
             </div>

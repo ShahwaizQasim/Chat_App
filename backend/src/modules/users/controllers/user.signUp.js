@@ -11,13 +11,13 @@ export const UserSignUp = async (req, res) => {
         if (
             [userName, email, password].some((field) => field?.trim() === "")
         ) {
-            res.status(400).send({ status: 400, msg: "all fields are required", error: true })
+            return res.status(400).send({ status: 400, msg: "all fields are required", error: true })
         }
         const existedUser = await UserModel.findOne({
             $or: [{ userName }, { email }],
         })
         if (existedUser) {
-            res.status(400).send({ status: 400, msg: "user with email and userName already exists", error: true })
+            return res.status(400).send({ status: 400, msg: "user with email and userName already exists", error: true })
         }
         const passwordHash = bcrypt.hashSync(req.body.password, 10);
         const user = await UserModel.create({
@@ -31,14 +31,14 @@ export const UserSignUp = async (req, res) => {
         )
 
         if (!createdUser) {
-            res.status(500).send({ status: 500, msg: "Something Went Wrong", error: true })
+            return res.status(500).send({ status: 500, msg: "Something Went Wrong", error: true })
         }
 
         const token = jwt.sign({ _id: user._id, email }, ENV.JWT_SECRET_KEY, {
             expiresIn: "1d" // 1 din ke liye token valid rahega
         });
 
-        res.status(200).send({ status: 200, msg: "user added successfully", user: createdUser, token, error: false });
+        res.status(200).send({ status: 200, msg: "user added successfully", user: createdUser, error: false });
 
     } catch (error) {
         res.status(500).send({ status: 500, msg: error })
