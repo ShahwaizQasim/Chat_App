@@ -10,9 +10,10 @@ import {
   ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { AppRoutes } from "../../../constant/AppRoutes";
+import { showToast } from "../../../components/SweerAlert2/alert";
 
 export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -22,6 +23,7 @@ export default function AuthForm() {
     email: "",
     password: "",
   });
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     setFormData({
@@ -47,6 +49,10 @@ export default function AuthForm() {
           "Content-Type": "application/json",
         },
       });
+      if(response?.data?.status === 200){
+        showToast("Signup Successfully", "success");
+        navigate("/login");
+      }
 
       console.log("Signup attempt:", response);
         setFormData({
@@ -55,7 +61,11 @@ export default function AuthForm() {
       password: "",
     });
     } catch (error) {
-      console.error("Error during signup:", error);
+      if(error?.response?.data?.msg){
+        showToast(error?.response?.data?.msg, "error");
+      } else {
+        showToast("Something went wrong", "error");
+      }
     } finally {
       setIsLoading(false);
     }

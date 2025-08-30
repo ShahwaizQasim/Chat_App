@@ -11,6 +11,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import axios from "axios";
+import { AppRoutes } from "../../../constant/AppRoutes";
+import { showToast } from "../../../components/SweerAlert2/alert";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +23,7 @@ export default function Login() {
     email: "",
     password: "",
   });
+  const navigate = useNavigate();
 
   const handleInputChange = (e) => {
     setFormData({
@@ -27,8 +32,41 @@ export default function Login() {
     });
   };
 
-  const handleSubmit = async () => {
-    console.log("Signup attempt:", formData);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const obj = {
+        email: formData.email,
+        password: formData.password,
+      };
+      setIsLoading(true);
+      const response = await axios({
+        method: "POST",
+        url: AppRoutes.login,
+        data: obj,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      if (response?.data?.status === 200) {
+        showToast("Login Successfully", "success");
+        navigate("/");
+      }
+
+      console.log("Login attempt:", response);
+      setFormData({
+        email: "",
+        password: "",
+      });
+    } catch (error) {
+      if (error?.response?.data?.msg) {
+        showToast(error?.response?.data?.msg, "error");
+      } else {
+        showToast("Something went wrong", "error");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -78,76 +116,77 @@ export default function Login() {
             {/* Form */}
             <div className="space-y-6">
               {/* Email Field */}
-              <div className="group">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Email Address"
-                    className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
-                    required
-                  />
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="group">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Email Address"
+                      className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="group">
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Password"
-                    className="w-full pl-14 pr-14 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-purple-300 transition-colors"
+                <div className="group">
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Password"
+                      className="w-full pl-14 pr-14 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-purple-300 transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <a
+                    href="#"
+                    className="text-purple-300 hover:text-purple-200 transition-colors text-sm"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
+                    Forgot Password? 🔑
+                  </a>
                 </div>
-              </div>
 
-              <div className="text-right">
-                <a
-                  href="#"
-                  className="text-purple-300 hover:text-purple-200 transition-colors text-sm"
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full relative bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
                 >
-                  Forgot Password? 🔑
-                </a>
-              </div>
-
-              {/* Submit Button */}
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full relative bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                    Processing...
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    Login
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                )}
-              </button>
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      Login
+                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  )}
+                </button>
+              </form>
             </div>
-
             {/* Toggle Form */}
             <div className="mt-8 text-center">
               <p className="text-white/70 mb-4 flex gap-2 justify-center">
