@@ -15,6 +15,9 @@ import axios from "axios";
 import { AppRoutes } from "../../../constant/AppRoutes";
 import { showToast } from "../../../components/SweerAlert2/alert";
 import { useNavigate } from "react-router-dom";
+import Cookies from "js-cookie";
+import { useDispatch } from "react-redux";
+import { login } from "../../../redux/slices/userSlice";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -24,6 +27,7 @@ export default function Login() {
     password: "",
   });
   const navigate = useNavigate();
+  const dispatch = useDispatch()
 
   const handleInputChange = (e) => {
     setFormData({
@@ -50,6 +54,8 @@ export default function Login() {
       });
       if (response?.data?.status === 200) {
         showToast("Login Successfully", "success");
+        dispatch(login(response?.data?.user));
+        Cookies.set("token", response?.data?.token);
         navigate("/");
       }
 
