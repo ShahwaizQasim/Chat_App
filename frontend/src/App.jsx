@@ -1,24 +1,46 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import Home from './Pages/Home/home'
-import AuthForm from './Pages/Auth/SignUp/signup'
-import Login from './Pages/Auth/Login/login'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import ChatInterface from './Pages/ChatPage/ChatPage'
+import Cookies from 'js-cookie'
+import { useEffect } from 'react'
+import { jwtDecode } from 'jwt-decode'
+import { login } from './redux/slices/userSlice'
+import Login from './Pages/Auth/Login/Login'
+import AuthForm from './Pages/Auth/SignUp/Signup'
 
 function App() {
-  const UserData  = useSelector((state) => state?.user)
+  const UserData = useSelector((state) => state?.user)
+  const GetToken = Cookies.get("token");
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (GetToken) {
+      const TokenDecoded = jwtDecode(GetToken);
+      dispatch(login(TokenDecoded))
+    }
+  }, [GetToken])
+
+  useEffect(() => {
+    if (UserData?.user?._id) {
+      navigate("/")
+    } else {
+      navigate("/login")
+    }
+  }, [UserData])
 
   return (
     <>
       <BrowserRouter>
         <Routes>
-          <Route path='/' element={UserData?.user ? <Home />: <Navigate to={'/login'} />} />
+          <Route path='/' element={<Home />} />
           {/* <Route path='/chatPage' element={UserData?.user ? <ChatInterface />: <Navigate to={'/login'} />} />
            */}
-           <Route path='/chatPage' element={<ChatInterface />} />
+          <Route path='/chatPage' element={<ChatInterface />} />
           <Route path='/register' element={<AuthForm />} />
-          <Route path='/login' element={<Login />} />
-          
+          <Route path='/login' element={<Login/>} />
+
         </Routes>
       </BrowserRouter>
     </>
