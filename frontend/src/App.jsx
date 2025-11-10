@@ -32,7 +32,6 @@ function App() {
 
   return (
     <>
-      <BrowserRouter>
         <Routes>
           <Route path='/' element={<Home />} />
           {/* <Route path='/chatPage' element={UserData?.user ? <ChatInterface />: <Navigate to={'/login'} />} />
@@ -42,7 +41,6 @@ function App() {
           <Route path='/login' element={<Login/>} />
 
         </Routes>
-      </BrowserRouter>
     </>
   )
 }

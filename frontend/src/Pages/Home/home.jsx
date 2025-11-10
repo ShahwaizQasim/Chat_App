@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 
 const Home = () => {
   const UserData = useSelector((state) => state?.user)
-  console.log("UserData", UserData.user)
+  // console.log("UserData", UserData.user)
   return (
     <div className='h-[100vh] w-100 flex flex-col justify-center items-center'>
       <h1>Go to chat page</h1>
