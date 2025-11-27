@@ -1,12 +1,10 @@
+import { PrivateVariables } from "../config/config";
 
-
-const dev = "http://localhost:3000/";
-
-export const BASE_URL = dev;
 
 const AppRoutes = {
-    signup: `${BASE_URL}api/auth/signUp`,
-    login: `${BASE_URL}api/auth/login`,
+    signup: `${PrivateVariables.BACKEND_URL}/api/auth/signUp`,
+    login: `${PrivateVariables.BACKEND_URL}/api/auth/login`,
+    UsersGet: `${PrivateVariables.BACKEND_URL}/api/get/all_users`
 }
 
 export {

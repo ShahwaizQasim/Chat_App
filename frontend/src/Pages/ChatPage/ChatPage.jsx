@@ -1,59 +1,38 @@
 import React, { useState } from 'react';
 import { Send, Search, MoreVertical, Phone, Video } from 'lucide-react';
+import io from 'socket.io-client'
+import { PrivateVariables } from '../../config/config';
+import { useEffect } from 'react';
+import axios from 'axios'
+import { AppRoutes } from '../../constant/AppRoutes';
+
+const socket = io(PrivateVariables.BACKEND_URL);
 
 const ChatInterface = () => {
   const [selectedUser, setSelectedUser] = useState(null);
+  const [users, setUsers] = useState([])
   const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Sample users data
-  const users = [
-    {
-      id: 1,
-      name: 'Ahmed Khan',
-      lastMessage: 'Salam, kya haal hai?',
-      time: '2:30 PM',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-      online: true,
-      unreadCount: 2
-    },
-    {
-      id: 2,
-      name: 'Fatima Ali',
-      lastMessage: 'Meeting ka time confirm kar do',
-      time: '1:45 PM',
-      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=100&h=100&fit=crop&crop=face',
-      online: false,
-      unreadCount: 0
-    },
-    {
-      id: 3,
-      name: 'Hassan Ahmed',
-      lastMessage: 'Project complete ho gaya',
-      time: '12:15 PM',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face',
-      online: true,
-      unreadCount: 1
-    },
-    {
-      id: 4,
-      name: 'Aisha Rahman',
-      lastMessage: 'Thanks for your help!',
-      time: '11:30 AM',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face',
-      online: false,
-      unreadCount: 0
-    },
-    {
-      id: 5,
-      name: 'Usman Malik',
-      lastMessage: 'Kal milte hain',
-      time: '10:20 AM',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-      online: true,
-      unreadCount: 3
+  const GetUsers = async () => {
+    try {
+      const users = await axios.get(AppRoutes.UsersGet);
+      console.log("++++++++++", users.data.users);
+
+      setUsers(users.data.users);
+
+    } catch (error) {
+      console.log("error++++", error);
     }
-  ];
+  }
+
+  // console.log('users+++++++++++', users);
+
+
+  useEffect(() => {
+    GetUsers();
+  }, [])
 
   // Sample chat messages
   const chatMessages = {
@@ -74,19 +53,64 @@ const ChatInterface = () => {
   };
 
   const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase())
+    user.userName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSendMessage = () => {
-    if (message.trim() && selectedUser) {
-      // Add message logic here
-      setMessage('');
-    }
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    const roomId = `room-${selectedUser._id}`; // tum apni marzi se naam rakh sakte ho
+
+    // Join room
+    socket.emit("join-room", roomId);
+    console.log("Joining room:", roomId);
+
+    // Optional: agar user change ho to purane room se nikalna chaho to:
+    return () => {
+      // Agar leave-room backend pe handle karna ho to:
+      // socket.emit("leave-room", roomId);
+    };
+  }, [selectedUser]);
+
+
+  useEffect(() => {
+    socket.on("private_message", (msg) => {
+      console.log("Receive msg:", msg);
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    return () => socket.off("private_message");
+  }, []);
+
+
+  const HandleSendPrivateMessage = (receiverId) => {
+    if (!message.trim()) return;
+
+    const newMessage = {
+      text: message,
+      sender: "me",
+      time: new Date().toLocaleTimeString(),
+    };
+
+    // Apni UI me pehle add karo
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Backend ko bhejo
+    socket.emit("private_message", {
+      message: newMessage,
+      receiverId,
+    });
+
+    setMessage("");
   };
 
+  // console.log('message', message);
+  console.log('messages', messages);
+
+
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSendMessage();
+    if (e.key === "Enter") {
+      HandleSendPrivateMessage(selectedUser._id.toString());
     }
   };
 
@@ -113,17 +137,16 @@ const ChatInterface = () => {
         <div className="flex-1 overflow-y-auto">
           {filteredUsers.map((user) => (
             <div
-              key={user.id}
+              key={user._id}
               onClick={() => setSelectedUser(user)}
-              className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
-                selectedUser?.id === user.id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
-              }`}
+              className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${selectedUser?._id === user._id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
+                }`}
             >
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <img
-                    src={user.avatar}
-                    alt={user.name}
+                    src={user.profilePicture}
+                    alt={user.userName}
                     className="w-12 h-12 rounded-full object-cover"
                   />
                   {user.online && (
@@ -132,7 +155,7 @@ const ChatInterface = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-gray-900 truncate">{user.name}</h3>
+                    <h3 className="font-medium text-gray-900 truncate">{user.userName}</h3>
                     <span className="text-xs text-gray-500">{user.time}</span>
                   </div>
                   <p className="text-sm text-gray-600 truncate mt-1">{user.lastMessage}</p>
@@ -157,8 +180,8 @@ const ChatInterface = () => {
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <img
-                    src={selectedUser.avatar}
-                    alt={selectedUser.name}
+                    src={selectedUser.profilePicture}
+                    alt={selectedUser.userName}
                     className="w-10 h-10 rounded-full object-cover"
                   />
                   {selectedUser.online && (
@@ -166,7 +189,7 @@ const ChatInterface = () => {
                   )}
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-900">{selectedUser.name}</h2>
+                  <h2 className="font-semibold text-gray-900">{selectedUser.userName}</h2>
                   <p className="text-sm text-gray-500">
                     {selectedUser.online ? 'Online' : 'Last seen recently'}
                   </p>
@@ -187,22 +210,20 @@ const ChatInterface = () => {
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {(chatMessages[selectedUser.id] || []).map((msg) => (
+              {(chatMessages[selectedUser._id] || []).map((msg) => (
                 <div
-                  key={msg.id}
+                  key={msg._id}
                   className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      msg.sender === 'me'
-                        ? 'bg-blue-500 text-white rounded-br-sm'
-                        : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
-                    }`}
+                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${msg.sender === 'me'
+                      ? 'bg-blue-500 text-white rounded-br-sm'
+                      : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
+                      }`}
                   >
                     <p className="text-sm">{msg.text}</p>
-                    <p className={`text-xs mt-1 ${
-                      msg.sender === 'me' ? 'text-blue-100' : 'text-gray-500'
-                    }`}>
+                    <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-blue-100' : 'text-gray-500'
+                      }`}>
                       {msg.time}
                     </p>
                   </div>
@@ -222,7 +243,7 @@ const ChatInterface = () => {
                   onKeyPress={handleKeyPress}
                 />
                 <button
-                  onClick={handleSendMessage}
+                  onClick={() => HandleSendPrivateMessage(selectedUser._id)}
                   className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
                   disabled={!message.trim()}
                 >
