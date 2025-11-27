@@ -5,6 +5,7 @@ import { PrivateVariables } from '../../config/config';
 import { useEffect } from 'react';
 import axios from 'axios'
 import { AppRoutes } from '../../constant/AppRoutes';
+import { useSelector } from 'react-redux';
 
 const socket = io(PrivateVariables.BACKEND_URL);
 
@@ -14,6 +15,8 @@ const ChatInterface = () => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const userGet = useSelector((state) => state?.user)
+  const myUserId = userGet.user._id;
 
   const GetUsers = async () => {
     try {
@@ -52,9 +55,18 @@ const ChatInterface = () => {
     ]
   };
 
-  const filteredUsers = users.filter(user =>
-    user.userName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users
+    .filter(user =>
+      user.userName.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (a._id === myUserId) return -1;  // ✅ me top
+      if (b._id === myUserId) return 1;
+      return 0;
+    });
+
+  // console.log('filteredUsers', filtered);
+
 
   useEffect(() => {
     if (!selectedUser) return;
@@ -86,10 +98,16 @@ const ChatInterface = () => {
   const HandleSendPrivateMessage = (receiverId) => {
     if (!message.trim()) return;
 
+    // myUserId = 
     const newMessage = {
       text: message,
-      sender: "me",
-      time: new Date().toLocaleTimeString(),
+      senderId: myUserId,        // real sender
+      receiverId: receiverId,   // samnay wala user
+      time: new Date().toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true
+      }),
     };
 
     // Apni UI me pehle add karo
@@ -155,7 +173,10 @@ const ChatInterface = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-gray-900 truncate">{user.userName}</h3>
+                    <h3 className="font-medium text-gray-900 truncate">
+                      {user.userName}
+                      {user._id === myUserId && <span className="ml-1 text-blue-400">(You)</span>}
+                    </h3>
                     <span className="text-xs text-gray-500">{user.time}</span>
                   </div>
                   <p className="text-sm text-gray-600 truncate mt-1">{user.lastMessage}</p>
@@ -210,25 +231,28 @@ const ChatInterface = () => {
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {(chatMessages[selectedUser._id] || []).map((msg) => (
-                <div
-                  key={msg._id}
-                  className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-                >
+              {messages.map((msg, i) => {
+                const isMe = msg.senderId === myUserId;
+
+                return (
                   <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${msg.sender === 'me'
-                      ? 'bg-blue-500 text-white rounded-br-sm'
-                      : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
-                      }`}
+                    key={i}
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                   >
-                    <p className="text-sm">{msg.text}</p>
-                    <p className={`text-xs mt-1 ${msg.sender === 'me' ? 'text-blue-100' : 'text-gray-500'
-                      }`}>
-                      {msg.time}
-                    </p>
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe
+                        ? 'bg-blue-500 text-white rounded-br-sm'
+                        : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
+                        }`}
+                    >
+                      <p className="text-sm">{msg.text}</p>
+                      <p className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                        {msg.time}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Message Input */}
