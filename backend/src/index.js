@@ -7,6 +7,7 @@ import cors from "cors";
 import helmet from "helmet";
 import http from "http";
 import { Server } from "socket.io";
+import { messageModel } from "./models/userMessage.modal.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -31,20 +32,29 @@ app.get("/", (req, res) => {
   res.send("Hello World");
 });
 
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
 
   // User apna khud ka room join karega (userId)
-  socket.on('join-room', (userId) => {
+  socket.on("join-room", (userId) => {
     socket.join(userId);
     console.log(`${userId} joined their private room`);
   });
 
   // Private message send
-  socket.on('private_message', ({ message, receiverId }) => {
+  socket.on("private_message", async ({ message, receiverId }) => {
     console.log("Private Message:", message, "To:", receiverId);
 
-    io.to(receiverId).emit('private_message', message);
+    // message save in mongodb
+    let SavedMessage = await messageModel.create({
+      senderId: message.senderId,
+      recieverId: receiverId,
+      text: message.text,
+      time: message.time,
+    });
+
+// SEND TO RECEIVER (REAL TIME)
+    io.to(receiverId).emit("private_message", SavedMessage);
   });
 
   socket.on("disconnect", () => {

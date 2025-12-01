@@ -16,17 +16,24 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const userGet = useSelector((state) => state?.user)
-  const myUserId = userGet.user._id;
+  const myUserId = userGet.user?._id;
 
   const GetUsers = async () => {
     try {
       const users = await axios.get(AppRoutes.UsersGet);
-      console.log("++++++++++", users.data.users);
-
       setUsers(users.data.users);
-
     } catch (error) {
       console.log("error++++", error);
+    }
+  }
+
+  const GetAllMessages = async (receiverId) => {
+    if (!myUserId || !receiverId) return;
+    try {
+      const getMessage = await axios.get(`${AppRoutes.GetMessages}${myUserId}/${receiverId}`)
+      setMessages(getMessage.data.msg);
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -37,52 +44,29 @@ const ChatInterface = () => {
     GetUsers();
   }, [])
 
-  // Sample chat messages
-  const chatMessages = {
-    1: [
-      { id: 1, text: 'Salam Ahmed! Kya haal hai?', sender: 'me', time: '2:25 PM' },
-      { id: 2, text: 'Walaikum salam! Sab theek, aap sunayein', sender: 'user', time: '2:26 PM' },
-      { id: 3, text: 'Alhamdulillah, office ka kaam busy hai', sender: 'me', time: '2:28 PM' },
-      { id: 4, text: 'Haan same yahan bhi, weekend plans kya hain?', sender: 'user', time: '2:30 PM' }
-    ],
-    2: [
-      { id: 1, text: 'Meeting ka time 3 PM theek rahega?', sender: 'me', time: '1:40 PM' },
-      { id: 2, text: 'Haan bilkul, main ready rahungi', sender: 'user', time: '1:45 PM' }
-    ],
-    3: [
-      { id: 1, text: 'Hassan project ka status kya hai?', sender: 'me', time: '12:10 PM' },
-      { id: 2, text: 'Project complete ho gaya, review kar lein', sender: 'user', time: '12:15 PM' }
-    ]
-  };
-
   const filteredUsers = users
     .filter(user =>
       user.userName.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      if (a._id === myUserId) return -1;  // ✅ me top
+      if (a._id === myUserId) return -1;  // me top
       if (b._id === myUserId) return 1;
       return 0;
     });
 
+
+  const filteredMessages = selectedUser ? messages.filter(
+    msg =>
+      (msg.senderId === myUserId && msg.recieverId === selectedUser._id) ||
+      (msg.senderId === selectedUser._id && msg.recieverId === myUserId)
+  ) : [];
   // console.log('filteredUsers', filtered);
 
 
   useEffect(() => {
-    if (!selectedUser) return;
-
-    const roomId = `room-${selectedUser._id}`; // tum apni marzi se naam rakh sakte ho
-
-    // Join room
-    socket.emit("join-room", roomId);
-    console.log("Joining room:", roomId);
-
-    // Optional: agar user change ho to purane room se nikalna chaho to:
-    return () => {
-      // Agar leave-room backend pe handle karna ho to:
-      // socket.emit("leave-room", roomId);
-    };
-  }, [selectedUser]);
+    if (!myUserId) return;
+    socket.emit("join-room", myUserId);   // apna personal room
+  }, [myUserId]);
 
 
   useEffect(() => {
@@ -94,6 +78,13 @@ const ChatInterface = () => {
     return () => socket.off("private_message");
   }, []);
 
+  // Load messages when selectedUser changes
+  useEffect(() => {
+    if (selectedUser && myUserId) {
+      GetAllMessages(selectedUser._id);
+    }
+  }, [selectedUser, myUserId]);
+
 
   const HandleSendPrivateMessage = (receiverId) => {
     if (!message.trim()) return;
@@ -102,7 +93,7 @@ const ChatInterface = () => {
     const newMessage = {
       text: message,
       senderId: myUserId,        // real sender
-      receiverId: receiverId,   // samnay wala user
+      recieverId: receiverId,   // samnay wala user
       time: new Date().toLocaleTimeString([], {
         hour: "numeric",
         minute: "2-digit",
@@ -112,7 +103,6 @@ const ChatInterface = () => {
 
     // Apni UI me pehle add karo
     setMessages((prev) => [...prev, newMessage]);
-
     // Backend ko bhejo
     socket.emit("private_message", {
       message: newMessage,
@@ -137,7 +127,7 @@ const ChatInterface = () => {
       {/* Left Sidebar - Users List */}
       <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 pl-8 pt border-b border-gray-200">
           <h1 className="text-xl font-semibold text-gray-800 mb-3">Messages</h1>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -156,8 +146,11 @@ const ChatInterface = () => {
           {filteredUsers.map((user) => (
             <div
               key={user._id}
-              onClick={() => setSelectedUser(user)}
-              className={`p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${selectedUser?._id === user._id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
+              onClick={() => {
+                setSelectedUser(user);
+                GetAllMessages(user._id);   // HISTORY LOAD HERE
+              }}
+              className={`p-4 pl-8 pt-5 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${selectedUser?._id === user._id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
                 }`}
             >
               <div className="flex items-center space-x-3">
@@ -231,7 +224,7 @@ const ChatInterface = () => {
 
             {/* Chat Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {messages.map((msg, i) => {
+              {filteredMessages.map((msg, i) => {
                 const isMe = msg.senderId === myUserId;
 
                 return (
