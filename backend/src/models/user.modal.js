@@ -16,7 +16,7 @@ const UserSchema = new Schema({
     },
     profilePicture: {
         type: String,
-        default: "/api.png"
+        required:true
     },
     status: {
         type: String,

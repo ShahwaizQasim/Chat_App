@@ -18,6 +18,8 @@ import { showToast } from "../../../components/SweerAlert2/alert";
 export default function AuthForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -31,37 +33,42 @@ export default function AuthForm() {
       [e.target.name]: e.target.value,
     });
   };
+  const handleChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImage(file);
+      const imagewUrl = URL.createObjectURL(file);
+      setPreview(imagewUrl);
+    }
+  };
 
   const handleSignUp = async (e) => {
     e.preventDefault();
     try {
-      const obj = {
-        userName: formData.name,
-        email: formData.email,
-        password: formData.password,
-      };
+      const signUpFormPayload = new FormData();
+      signUpFormPayload.append("userName", formData.name);
+      signUpFormPayload.append("email", formData.email);
+      signUpFormPayload.append("password", formData.password);
+      if (image) {
+        signUpFormPayload.append("profilePicture", image);
+      }
       setIsLoading(true);
-      const response = await axios({
-        method: "POST",
-        url: AppRoutes.signup,
-        data: obj,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if(response?.data?.status === 200){
+      const response = await axios.post(
+        `${AppRoutes.signup}`,
+        signUpFormPayload,
+      );
+      if (response?.data?.status === 200) {
         showToast("Signup Successfully", "success");
         navigate("/login");
       }
-
-      console.log("Signup attempt:", response);
-        setFormData({
-      name: "",
-      email: "",
-      password: "",
-    });
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        setPreview: null,
+      });
     } catch (error) {
-      if(error?.response?.data?.msg){
+      if (error?.response?.data?.msg) {
         showToast(error?.response?.data?.msg, "error");
       } else {
         showToast("Something went wrong", "error");
@@ -117,95 +124,110 @@ export default function AuthForm() {
             </div>
 
             {/* Form */}
-            <div >
-            <form onSubmit={handleSignUp} className="space-y-6">
-
-              <div className="group">
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="Full Name"
-                    className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
-                    required
-                  />
+            <div>
+              <form onSubmit={handleSignUp} className="space-y-6">
+                <div className="group">
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="Full Name"
+                      className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Email Field */}
-              <div className="group">
-                <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Email Address"
-                    className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
-                    required
-                  />
+                {/* Email Field */}
+                <div className="group">
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Email Address"
+                      className="w-full pl-14 pr-4 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="group">
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Password"
-                    className="w-full pl-14 pr-14 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-purple-300 transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
 
-              <div className="text-right">
-                <a
-                  href="#"
-                  className="text-purple-300 hover:text-purple-200 transition-colors text-sm"
+                <div className="group">
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/50 h-5 w-5 group-focus-within:text-purple-300 transition-colors" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Password"
+                      className="w-full pl-14 pr-14 py-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl focus:ring-2 focus:ring-purple-400 focus:border-transparent outline-none transition-all text-white placeholder-white/50 hover:bg-white/15"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-purple-300 transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <label
+                  htmlFor="product"
+                  className="text-white/70 relative top-4"
                 >
-                  Forgot Password? 🔑
-                </a>
-              </div>
+                  {" "}
+                  Select Your Profile Picture
+                </label>
+                <input
+                  type="file"
+                  id="product"
+                  onChange={handleChange}
+                  placeholder="Select Product Picture"
+                  className="text-white/70"
+                />
+                {preview && <img src={preview} alt="preview" width="100" />}
 
-              {/* Submit Button */}
-              <button
-                disabled={isLoading}
-                type="submit"
-                className="w-full relative bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
-                    Processing...
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    Create Account
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                )}
-              </button>
-            </form>
+                <div className="text-right">
+                  <Link
+                    ro="#"
+                    className="text-purple-300 hover:text-purple-200 transition-colors text-sm"
+                  >
+                    Forgot Password? 🔑
+                  </Link>
+                </div>
 
+                {/* Submit Button */}
+                <button
+                  disabled={isLoading}
+                  type="submit"
+                  className="w-full relative bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 hover:from-pink-600 hover:via-purple-600 hover:to-indigo-600 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-[1.02] hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden group"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      Create Account
+                      <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  )}
+                </button>
+              </form>
             </div>
 
             {/* Toggle Form */}

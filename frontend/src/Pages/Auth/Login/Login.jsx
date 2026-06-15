@@ -17,6 +17,7 @@ import { showToast } from "../../../components/SweerAlert2/alert";
 import { useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
 import { useDispatch } from "react-redux";
+import { login } from "../../../redux/slices/userSlice";
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -26,7 +27,7 @@ export default function Login() {
     password: "",
   });
   const navigate = useNavigate();
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
 
   const handleInputChange = (e) => {
     setFormData({
@@ -43,32 +44,21 @@ export default function Login() {
         password: formData.password,
       };
       setIsLoading(true);
-      const response = await axios({
-        method: "POST",
-        url: AppRoutes.login,
-        data: obj,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (response?.data?.status === 200) {
-        showToast("Login Successfully", "success");
-        // dispatch(login(response?.data?.user));
-        Cookies.set("token", response?.data?.token);
-        navigate("/");
-      }
+      const response = await axios.post(`${AppRoutes.login}`, obj);
+      const user = response?.data?.user;
+      const token = response?.data?.token
+      dispatch(login(user));
+      Cookies.set("token", token);
+      showToast("Login Successfully", "success");
 
-      console.log("Login attempt:", response);
+      navigate("/");
+
       setFormData({
         email: "",
         password: "",
       });
     } catch (error) {
-      if (error?.response?.data?.msg) {
-        showToast(error?.response?.data?.msg, "error");
-      } else {
-        showToast("Something went wrong", "error");
-      }
+     showToast(error?.message || "Something Went Wrong")
     } finally {
       setIsLoading(false);
     }
@@ -151,7 +141,7 @@ export default function Login() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-purple-300 transition-colors"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-purple-300 transition-colors"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -198,7 +188,7 @@ export default function Login() {
                 Don't have an account{" "}
                 <Link
                   to="/register"
-                  className="text-light hover:text-light font-semibold transition-colors"
+                  className="text-light hover:text-light font-semibold transition-colors hover:underline"
                 >
                   Sign up
                 </Link>

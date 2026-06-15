@@ -34,8 +34,6 @@ function App() {
     <>
         <Routes>
           <Route path='/' element={<Home />} />
-          {/* <Route path='/chatPage' element={UserData?.user ? <ChatInterface />: <Navigate to={'/login'} />} />
-           */}
           <Route path='/chatPage' element={<ChatInterface />} />
           <Route path='/register' element={<AuthForm />} />
           <Route path='/login' element={<Login/>} />

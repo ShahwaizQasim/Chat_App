@@ -1,6 +1,6 @@
-import { messageModel } from "../../../models/userMessage.modal.js";
+import { messageModel } from "../models/userMessage.modal.js"
 
-export const GetMessages = async (req, res) => {
+ const GetMessages = async (req, res) => {
   try {
     const { senderId, recieverId } = req.params;
     const messages = await messageModel
@@ -19,3 +19,7 @@ export const GetMessages = async (req, res) => {
     res.status(500).json({ status: 500, error: error?.message });
   }
 };
+
+export {
+  GetMessages
+}
