@@ -48,7 +48,7 @@ export default function Login() {
       const user = response?.data?.user;
       const token = response?.data?.token
       dispatch(login(user));
-      Cookies.set("token", token);
+      Cookies.set("token", token, { path: '/' });
       showToast("Login Successfully", "success");
 
       navigate("/");

@@ -1,73 +1,93 @@
-import React, { useState } from 'react';
-import { Send, Search, MoreVertical, Phone, Video } from 'lucide-react';
-import io from 'socket.io-client'
-import { PrivateVariables } from '../../config/config';
-import { useEffect } from 'react';
-import axios from 'axios'
-import { AppRoutes } from '../../constant/AppRoutes';
-import { useSelector } from 'react-redux';
+import React, { useState } from "react";
+import { Send, Search, MoreVertical, Phone, Video, LogOut } from "lucide-react";
+import io from "socket.io-client";
+import { PrivateVariables } from "../../config/config";
+import { useEffect } from "react";
+import axios from "axios";
+import { AppRoutes } from "../../constant/AppRoutes";
+import { useDispatch, useSelector } from "react-redux";
+import Cookies from "js-cookie";
+import { useNavigate } from "react-router-dom";
+import { logout } from "../../redux/slices/userSlice";
 
 const socket = io(PrivateVariables.BACKEND_URL);
 
 const ChatInterface = () => {
   const [selectedUser, setSelectedUser] = useState(null);
-  const [users, setUsers] = useState([])
-  const [message, setMessage] = useState('');
+  const [users, setUsers] = useState([]);
+  const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const userGet = useSelector((state) => state?.user)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const userGet = useSelector((state) => state?.user);
   const myUserId = userGet.user?._id;
+
+  const handleLogout = () => {
+    Cookies.remove("token", { path: "/" });
+    dispatch(logout());
+    navigate("/login");
+  };
 
   const GetUsers = async () => {
     try {
-      const users = await axios.get(AppRoutes.UsersGet);
-      setUsers(users.data.users);
+      setIsLoadingUsers(true);
+      const response = await axios.get(AppRoutes.UsersGet);
+      const fetchedUsers = Array.isArray(response?.data?.users)
+        ? response.data.users
+        : [];
+      setUsers(fetchedUsers);
     } catch (error) {
       console.log("error++++", error);
+      setUsers([]);
+    } finally {
+      setIsLoadingUsers(false);
     }
-  }
+  };
 
   const GetAllMessages = async (receiverId) => {
     if (!myUserId || !receiverId) return;
     try {
-      const getMessage = await axios.get(`${AppRoutes.GetMessages}${myUserId}/${receiverId}`)
+      const getMessage = await axios.get(
+        `${AppRoutes.GetMessages}${myUserId}/${receiverId}`,
+      );
       setMessages(getMessage.data.msg);
     } catch (error) {
       console.log(error);
     }
-  }
-
-  // console.log('users+++++++++++', users);
-
+  };
 
   useEffect(() => {
     GetUsers();
-  }, [])
+  }, []);
 
-  const filteredUsers = users
-    .filter(user =>
-      user.userName.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      if (a._id === myUserId) return -1;  // me top
-      if (b._id === myUserId) return 1;
-      return 0;
-    });
+  const filteredUsers = Array.isArray(users)
+    ? users
+        .filter((user) =>
+          user?.userName?.toLowerCase().includes(searchTerm.toLowerCase()),
+        )
+        .sort((a, b) => {
+          if (a._id === myUserId) return -1;
+          if (b._id === myUserId) return 1;
+          return 0;
+        })
+    : [];
 
-
-  const filteredMessages = selectedUser ? messages.filter(
-    msg =>
-      (msg.senderId === myUserId && msg.recieverId === selectedUser._id) ||
-      (msg.senderId === selectedUser._id && msg.recieverId === myUserId)
-  ) : [];
+  const filteredMessages = selectedUser
+    ? messages.filter(
+        (msg) =>
+          (msg.senderId === myUserId && msg.recieverId === selectedUser._id) ||
+          (msg.senderId === selectedUser._id && msg.recieverId === myUserId),
+      )
+    : [];
   // console.log('filteredUsers', filtered);
-
 
   useEffect(() => {
     if (!myUserId) return;
-    socket.emit("join-room", myUserId);   // apna personal room
+    socket.emit("join-room", myUserId); // apna personal room
   }, [myUserId]);
-
 
   useEffect(() => {
     socket.on("private_message", (msg) => {
@@ -85,19 +105,18 @@ const ChatInterface = () => {
     }
   }, [selectedUser, myUserId]);
 
-
   const HandleSendPrivateMessage = (receiverId) => {
     if (!message.trim()) return;
 
-    // myUserId = 
+    // myUserId =
     const newMessage = {
       text: message,
-      senderId: myUserId,        // real sender
-      recieverId: receiverId,   // samnay wala user
+      senderId: myUserId, // real sender
+      recieverId: receiverId, // samnay wala user
       time: new Date().toLocaleTimeString([], {
         hour: "numeric",
         minute: "2-digit",
-        hour12: true
+        hour12: true,
       }),
     };
 
@@ -113,8 +132,7 @@ const ChatInterface = () => {
   };
 
   // console.log('message', message);
-  console.log('messages', messages);
-
+  console.log("messages", messages);
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
@@ -143,45 +161,62 @@ const ChatInterface = () => {
 
         {/* Users List */}
         <div className="flex-1 overflow-y-auto">
-          {filteredUsers.map((user) => (
-            <div
-              key={user._id}
-              onClick={() => {
-                setSelectedUser(user);
-                GetAllMessages(user._id);   // HISTORY LOAD HERE
-              }}
-              className={`p-4 pl-8 pt-5 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${selectedUser?._id === user._id ? 'bg-blue-50 border-r-2 border-r-blue-500' : ''
+          {isLoadingUsers ? (
+            <div className="flex items-center justify-center h-full text-sm text-gray-500">
+              Loading users...
+            </div>
+          ) : filteredUsers.length > 0 ? (
+            filteredUsers.map((user) => (
+              <div
+                key={user._id}
+                onClick={() => {
+                  setSelectedUser(user);
+                  GetAllMessages(user._id);
+                }}
+                className={`p-4 pl-8 pt-5 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                  selectedUser?._id === user._id
+                    ? "bg-blue-50 border-r-2 border-r-blue-500"
+                    : ""
                 }`}
-            >
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <img
-                    src={user.profilePicture}
-                    alt={user.userName}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  {user.online && (
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <img
+                      src={user.profilePicture}
+                      alt={user.userName}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                    {user.online && (
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-medium text-gray-900 truncate">
+                        {user.userName}
+                        {user._id === myUserId && (
+                          <span className="ml-1 text-blue-400">(You)</span>
+                        )}
+                      </h3>
+                      <span className="text-xs text-gray-500">{user.time}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 truncate mt-1">
+                      {user.lastMessage}
+                    </p>
+                  </div>
+                  {user.unreadCount > 0 && (
+                    <div className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {user.unreadCount}
+                    </div>
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-gray-900 truncate">
-                      {user.userName}
-                      {user._id === myUserId && <span className="ml-1 text-blue-400">(You)</span>}
-                    </h3>
-                    <span className="text-xs text-gray-500">{user.time}</span>
-                  </div>
-                  <p className="text-sm text-gray-600 truncate mt-1">{user.lastMessage}</p>
-                </div>
-                {user.unreadCount > 0 && (
-                  <div className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {user.unreadCount}
-                  </div>
-                )}
               </div>
+            ))
+          ) : (
+            <div className="flex items-center justify-center h-full text-sm text-gray-500">
+              No users found
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -203,22 +238,40 @@ const ChatInterface = () => {
                   )}
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-900">{selectedUser.userName}</h2>
+                  <h2 className="font-semibold text-gray-900">
+                    {selectedUser.userName}
+                  </h2>
                   <p className="text-sm text-gray-500">
-                    {selectedUser.online ? 'Online' : 'Last seen recently'}
+                    {selectedUser.online ? "Online" : "Last seen recently"}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="relative flex items-center space-x-2">
                 <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
                   <Phone className="w-5 h-5" />
                 </button>
                 <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
                   <Video className="w-5 h-5" />
                 </button>
-                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
-                  <MoreVertical className="w-5 h-5" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMenu((prev) => !prev)}
+                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                  {showMenu && (
+                    <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -230,16 +283,19 @@ const ChatInterface = () => {
                 return (
                   <div
                     key={i}
-                    className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                   >
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isMe
-                        ? 'bg-blue-500 text-white rounded-br-sm'
-                        : 'bg-white text-gray-800 rounded-bl-sm shadow-sm'
-                        }`}
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        isMe
+                          ? "bg-blue-500 text-white rounded-br-sm"
+                          : "bg-white text-gray-800 rounded-bl-sm shadow-sm"
+                      }`}
                     >
                       <p className="text-sm">{msg.text}</p>
-                      <p className={`text-xs mt-1 ${isMe ? 'text-blue-100' : 'text-gray-500'}`}>
+                      <p
+                        className={`text-xs mt-1 ${isMe ? "text-blue-100" : "text-gray-500"}`}
+                      >
                         {msg.time}
                       </p>
                     </div>
@@ -276,8 +332,12 @@ const ChatInterface = () => {
               <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Send className="w-8 h-8 text-gray-400" />
               </div>
-              <h2 className="text-xl font-semibold text-gray-700 mb-2">Welcome to Chat</h2>
-              <p className="text-gray-500">Select a user from the left to start chatting</p>
+              <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                Welcome to Chat
+              </h2>
+              <p className="text-gray-500">
+                Select a user from the left to start chatting
+              </p>
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import Home from './Pages/Home/home'
 import { useDispatch, useSelector } from 'react-redux'
 import ChatInterface from './Pages/ChatPage/ChatPage'
@@ -14,21 +14,34 @@ function App() {
   const GetToken = Cookies.get("token");
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    if (GetToken) {
+    if (!GetToken) return;
+
+    try {
       const TokenDecoded = jwtDecode(GetToken);
       dispatch(login(TokenDecoded))
+    } catch (error) {
+      console.log('Invalid token:', error);
+      Cookies.remove('token', { path: '/' });
     }
-  }, [GetToken])
+  }, [GetToken, dispatch])
 
   useEffect(() => {
+    const publicRoutes = ['/login', '/register'];
+
     if (UserData?.user?._id) {
-      navigate("/")
-    } else {
-      navigate("/login")
+      if (publicRoutes.includes(location.pathname)) {
+        navigate('/');
+      }
+      return;
     }
-  }, [UserData])
+
+    if (!publicRoutes.includes(location.pathname)) {
+      navigate('/login');
+    }
+  }, [UserData, location.pathname, navigate])
 
   return (
     <>
