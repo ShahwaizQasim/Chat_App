@@ -51,7 +51,15 @@ io.on("connection", (socket) => {
       recieverId: receiverId,
       text: message.text,
       time: message.time,
+      isRead: false,
+
     });
+
+    // const unreadCount = await SavedMessage?.countDocuments({
+    //   senderId: message.senderId,
+    //   receiverId: receiverId,
+    //   isRead: false,
+    // });
 
     // SEND TO RECEIVER (REAL TIME)
     io.to(receiverId).emit("private_message", SavedMessage);

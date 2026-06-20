@@ -18,6 +18,10 @@ const MessageSchema = new Schema({
   time: {
     type: String,
   },
+    isRead: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 export const messageModel =

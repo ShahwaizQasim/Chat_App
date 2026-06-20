@@ -4,6 +4,7 @@ import 'dotenv/config';
 import UserModel from "../models/user.modal.js"
 import { ENV } from "../constant/index.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { messageModel } from "../models/userMessage.modal.js";
 
 const UserSignUp = async (req, res) => {
     try {
@@ -20,7 +21,7 @@ const UserSignUp = async (req, res) => {
 
         const User_Profile_Picture_Path = req.file?.path;
         console.log(User_Profile_Picture_Path);
-        
+
 
         if (!User_Profile_Picture_Path) {
             res.status(400).send({
@@ -108,12 +109,40 @@ const UserLogin = async (req, res) => {
 // All users Get 
 const UserGet = async (req, res) => {
     try {
-        const allUsersGet = await UserModel.find().select("-password");
-        res.status(200).send({ status: 200, msg: "user fetch successfully", users: allUsersGet })
+        const loggedInUserId = req?.user?.id;
+
+        const allUsersGet = await UserModel.find({
+            _id: { $ne: loggedInUserId }, // khud ko hide karne ke liye
+        }).select("-password");
+
+        const usersWithUnreadCount = await Promise.all(
+            allUsersGet.map(async (user) => {
+                const unreadCount = await messageModel.countDocuments({
+                    senderId: user?._id,
+                    receiverId: loggedInUserId,
+                    isRead: false,
+                });
+
+                return {
+                    ...user.toObject(),
+                    unreadCount,
+                };
+            })
+        );
+
+        res.status(200).send({
+            status: 200,
+            msg: "user fetch successfully",
+            users: usersWithUnreadCount,
+        });
     } catch (error) {
-        res.status(500).send({ status: 500, msg: "Internal Server Error" })
+        console.log(error);
+        res.status(500).send({
+            status: 500,
+            msg: "Internal Server Error",
+        });
     }
-}
+};
 
 export {
     UserSignUp,
