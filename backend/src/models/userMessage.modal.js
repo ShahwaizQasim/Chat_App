@@ -13,16 +13,31 @@ const MessageSchema = new Schema({
   },
   text: {
     type: String,
-    required: true,
+  },
+  image: {
+    type: String,
+    default: ""
+  },
+  voice: {
+    type: String,
+    default: ""
+  },
+
+  messageType: {
+    type: String,
+    enum: ["text", "image", "voice"],
+    required: true
   },
   time: {
     type: String,
   },
-    isRead: {
+  isRead: {
     type: Boolean,
     default: false,
   },
-});
+},
+  { timestamps: true }
+);
 
 export const messageModel =
   mongoose.models.message || mongoose.model("Message", MessageSchema);

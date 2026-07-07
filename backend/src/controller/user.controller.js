@@ -20,9 +20,6 @@ const UserSignUp = async (req, res) => {
         }
 
         const User_Profile_Picture_Path = req.file?.path;
-        console.log(User_Profile_Picture_Path);
-
-
         if (!User_Profile_Picture_Path) {
             res.status(400).send({
                 status: 400,
@@ -115,17 +112,33 @@ const UserGet = async (req, res) => {
             _id: { $ne: loggedInUserId }, // khud ko hide karne ke liye
         }).select("-password");
 
-        const usersWithUnreadCount = await Promise.all(
+        const usersWithData = await Promise.all(
             allUsersGet.map(async (user) => {
                 const unreadCount = await messageModel.countDocuments({
-                    senderId: user?._id,
+                    senderId: user._id,
                     receiverId: loggedInUserId,
                     isRead: false,
                 });
 
+                const lastMessage = await messageModel
+                    .findOne({
+                        $or: [
+                            {
+                                senderId: loggedInUserId,
+                                receiverId: user._id,
+                            },
+                            {
+                                senderId: user._id,
+                                receiverId: loggedInUserId,
+                            },
+                        ],
+                    })
+                    .sort({ _id: -1 });
                 return {
                     ...user.toObject(),
                     unreadCount,
+                    lastMessage: lastMessage?.text || "Voice Message ",
+                    lastMessageTime: lastMessage?.time || null,
                 };
             })
         );
@@ -133,7 +146,7 @@ const UserGet = async (req, res) => {
         res.status(200).send({
             status: 200,
             msg: "user fetch successfully",
-            users: usersWithUnreadCount,
+            users: usersWithData,
         });
     } catch (error) {
         console.log(error);

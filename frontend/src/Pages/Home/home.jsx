@@ -23,8 +23,10 @@ const Home = () => {
       ) : (
         <h2>Please log in</h2>
       )}
-      <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded transform hover:scale-95 transition">
-        <Link to="/chatPage">Go to Chat Page</Link>
+      <button
+      onClick={()=> navigate('/chatPage')}
+      className="mt-4 px-4 py-2 bg-blue-500 text-white rounded transform hover:scale-95 transition">
+        Go to Chat Page
       </button>
       <button
         onClick={() => handleLogout()}

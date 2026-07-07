@@ -1,14 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Send, Search, MoreVertical, Phone, Video, LogOut } from "lucide-react";
 import io from "socket.io-client";
 import { PrivateVariables } from "../../config/config";
-import { useEffect } from "react";
 import axios from "axios";
 import { AppRoutes } from "../../constant/AppRoutes";
 import { useDispatch, useSelector } from "react-redux";
 import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../../redux/slices/userSlice";
+import ChatInputBar from "../../components/ChatInputBar";
 
 const socket = io(PrivateVariables.BACKEND_URL);
 
@@ -20,10 +20,12 @@ const ChatInterface = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const messagesContainerRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const userGet = useSelector((state) => state?.user);
   const myUserId = userGet.user?._id;
+  const token = Cookies.get("token");
 
   const handleLogout = () => {
     Cookies.remove("token", { path: "/" });
@@ -34,7 +36,11 @@ const ChatInterface = () => {
   const GetUsers = async () => {
     try {
       setIsLoadingUsers(true);
-      const response = await axios.get(AppRoutes.UsersGet);
+      const response = await axios.get(AppRoutes.UsersGet, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const fetchedUsers = Array.isArray(response?.data?.users)
         ? response.data.users
         : [];
@@ -59,9 +65,28 @@ const ChatInterface = () => {
     }
   };
 
-  useEffect(() => {
-    GetUsers();
-  }, []);
+  const markMessagesAsRead = async (senderId) => {
+    try {
+      await axios.put(
+        `${AppRoutes.markasRead}/api/messages/read/${senderId}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      // Sidebar state update
+      setUsers((prev) =>
+        prev.map((user) =>
+          user._id === senderId ? { ...user, unreadCount: 0 } : user,
+        ),
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const filteredUsers = Array.isArray(users)
     ? users
@@ -78,12 +103,22 @@ const ChatInterface = () => {
   const filteredMessages = selectedUser
     ? messages.filter(
         (msg) =>
+          // console.log(msg.senderId === myUserId && msg.recieverId === selectedUser._id) ||
+
           (msg.senderId === myUserId && msg.recieverId === selectedUser._id) ||
           (msg.senderId === selectedUser._id && msg.recieverId === myUserId),
       )
     : [];
-  // console.log('filteredUsers', filtered);
 
+  useEffect(() => {
+    if (!messagesContainerRef.current) return;
+    messagesContainerRef.current.scrollTop =
+      messagesContainerRef.current.scrollHeight;
+  }, [filteredMessages]);
+
+  useEffect(() => {
+    GetUsers();
+  }, []);
   useEffect(() => {
     if (!myUserId) return;
     socket.emit("join-room", myUserId); // apna personal room
@@ -93,6 +128,7 @@ const ChatInterface = () => {
     socket.on("private_message", (msg) => {
       console.log("Receive msg:", msg);
       setMessages((prev) => [...prev, msg]);
+      GetUsers();
     });
 
     return () => socket.off("private_message");
@@ -100,9 +136,14 @@ const ChatInterface = () => {
 
   // Load messages when selectedUser changes
   useEffect(() => {
-    if (selectedUser && myUserId) {
-      GetAllMessages(selectedUser._id);
-    }
+    const loadChat = async () => {
+      if (!selectedUser || !myUserId) return;
+
+      await GetAllMessages(selectedUser._id);
+      await markMessagesAsRead(selectedUser._id);
+    };
+
+    loadChat();
   }, [selectedUser, myUserId]);
 
   const HandleSendPrivateMessage = (receiverId) => {
@@ -111,6 +152,7 @@ const ChatInterface = () => {
     // myUserId =
     const newMessage = {
       text: message,
+      messageType: "text",
       senderId: myUserId, // real sender
       recieverId: receiverId, // samnay wala user
       time: new Date().toLocaleTimeString([], {
@@ -127,16 +169,49 @@ const ChatInterface = () => {
       message: newMessage,
       receiverId,
     });
-
+    GetUsers();
     setMessage("");
   };
-
-  // console.log('message', message);
-  console.log("messages", messages);
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter") {
       HandleSendPrivateMessage(selectedUser._id.toString());
+    }
+  };
+
+  const handleSendVoiceMessage = async (blobUrl) => {
+    if (!selectedUser?._id || !myUserId) return;
+
+    try {
+      const res = await fetch(blobUrl);
+      const blob = await res.blob();
+      const formData = new FormData();
+      formData.append("voice", blob);
+      const response = await axios.post(`${AppRoutes.uploadVoice}`, formData);
+      const voiceUrl = response.data.voiceUrl;
+      console.log("voiceUrl => ", voiceUrl);
+
+      const newMessage = {
+        senderId: myUserId,
+        recieverId: selectedUser._id,
+        voice: voiceUrl,
+        messageType: "voice",
+        time: new Date().toLocaleTimeString([], {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }),
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+
+      socket.emit("private_message", {
+        receiverId: selectedUser._id,
+        message: newMessage,
+      });
+      GetUsers();
+    } catch (error) {
+      console.error("Error fetching voice message:", error);
     }
   };
 
@@ -193,7 +268,7 @@ const ChatInterface = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start">
                       <h3 className="font-medium text-gray-900 truncate">
-                        {user.userName}
+                        <span>{user.userName}</span>
                         {user._id === myUserId && (
                           <span className="ml-1 text-blue-400">(You)</span>
                         )}
@@ -204,9 +279,9 @@ const ChatInterface = () => {
                       {user.lastMessage}
                     </p>
                   </div>
-                  {user.unreadCount > 0 && (
+                  {user._id !== myUserId && user.unreadCount > 0 && (
                     <div className="bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                      {user.unreadCount}
+                      {user?.unreadCount}
                     </div>
                   )}
                 </div>
@@ -276,7 +351,10 @@ const ChatInterface = () => {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+            >
               {filteredMessages.map((msg, i) => {
                 const isMe = msg.senderId === myUserId;
 
@@ -292,7 +370,17 @@ const ChatInterface = () => {
                           : "bg-white text-gray-800 rounded-bl-sm shadow-sm"
                       }`}
                     >
-                      <p className="text-sm">{msg.text}</p>
+                      {msg.messageType === "voice" || msg.type === "voice" ? (
+                        <div className="flex flex-col gap-2 md:w-80 w-full">
+                          <audio
+                            src={msg.voice}
+                            controls
+                            className="w-full rounded-md bg-black/5"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm">{msg.text}</p>
+                      )}
                       <p
                         className={`text-xs mt-1 ${isMe ? "text-blue-100" : "text-gray-500"}`}
                       >
@@ -305,25 +393,14 @@ const ChatInterface = () => {
             </div>
 
             {/* Message Input */}
-            <div className="bg-white p-4 border-t border-gray-200">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  placeholder="Type a message..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                />
-                <button
-                  onClick={() => HandleSendPrivateMessage(selectedUser._id)}
-                  className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-                  disabled={!message.trim()}
-                >
-                  <Send className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+            <ChatInputBar
+              message={message}
+              setMessage={setMessage}
+              handleKeyPress={handleKeyPress}
+              selectedUser={selectedUser}
+              HandleSendPrivateMessage={HandleSendPrivateMessage}
+              handleSendVoiceMessage={handleSendVoiceMessage}
+            />
           </>
         ) : (
           /* No User Selected */

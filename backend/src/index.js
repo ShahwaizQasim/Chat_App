@@ -50,6 +50,9 @@ io.on("connection", (socket) => {
       senderId: message.senderId,
       recieverId: receiverId,
       text: message.text,
+      voice: message.voice || "",
+      image: message.image || "",
+      messageType: message.messageType,
       time: message.time,
       isRead: false,
 
