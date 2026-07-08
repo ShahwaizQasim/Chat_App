@@ -1,8 +1,9 @@
 import { ReactMediaRecorder } from "react-media-recorder";
 import { Mic, Square, Trash2, Send, X, Play, Pause } from "lucide-react";
 import { Waveform } from "./WaveForm";
+import { memo } from "react";
 
-export default function ChatInputBar({
+const ChatInputBar = memo(function ChatInputBar({
   message,
   setMessage,
   handleKeyPress,
@@ -103,4 +104,6 @@ export default function ChatInputBar({
       </div>
     </div>
   );
-}
+})
+
+export default ChatInputBar;

@@ -33,6 +33,7 @@ export default function AuthForm() {
       [e.target.name]: e.target.value,
     });
   };
+  
   const handleChange = (e) => {
     const file = e.target.files[0];
     if (file) {

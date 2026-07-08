@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Search, MoreVertical, Phone, Video, LogOut } from "lucide-react";
 import io from "socket.io-client";
 import { PrivateVariables } from "../../config/config";
@@ -146,56 +146,16 @@ const ChatInterface = () => {
     loadChat();
   }, [selectedUser, myUserId]);
 
-  const HandleSendPrivateMessage = (receiverId) => {
-    if (!message.trim()) return;
+  const HandleSendPrivateMessage = useCallback(
+    (receiverId) => {
+      if (!message.trim()) return;
 
-    // myUserId =
-    const newMessage = {
-      text: message,
-      messageType: "text",
-      senderId: myUserId, // real sender
-      recieverId: receiverId, // samnay wala user
-      time: new Date().toLocaleTimeString([], {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-      }),
-    };
-
-    // Apni UI me pehle add karo
-    setMessages((prev) => [...prev, newMessage]);
-    // Backend ko bhejo
-    socket.emit("private_message", {
-      message: newMessage,
-      receiverId,
-    });
-    GetUsers();
-    setMessage("");
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      HandleSendPrivateMessage(selectedUser._id.toString());
-    }
-  };
-
-  const handleSendVoiceMessage = async (blobUrl) => {
-    if (!selectedUser?._id || !myUserId) return;
-
-    try {
-      const res = await fetch(blobUrl);
-      const blob = await res.blob();
-      const formData = new FormData();
-      formData.append("voice", blob);
-      const response = await axios.post(`${AppRoutes.uploadVoice}`, formData);
-      const voiceUrl = response.data.voiceUrl;
-      console.log("voiceUrl => ", voiceUrl);
-
+      // myUserId =
       const newMessage = {
-        senderId: myUserId,
-        recieverId: selectedUser._id,
-        voice: voiceUrl,
-        messageType: "voice",
+        text: message,
+        messageType: "text",
+        senderId: myUserId, // real sender
+        recieverId: receiverId, // samnay wala user
         time: new Date().toLocaleTimeString([], {
           hour: "numeric",
           minute: "2-digit",
@@ -203,17 +163,66 @@ const ChatInterface = () => {
         }),
       };
 
+      // Apni UI me pehle add karo
       setMessages((prev) => [...prev, newMessage]);
-
+      // Backend ko bhejo
       socket.emit("private_message", {
-        receiverId: selectedUser._id,
         message: newMessage,
+        receiverId,
       });
       GetUsers();
-    } catch (error) {
-      console.error("Error fetching voice message:", error);
-    }
-  };
+      setMessage("");
+    },
+    [message, myUserId],
+  );
+
+  const handleKeyPress = useCallback(
+    (e) => {
+      if (e.key === "Enter") {
+        HandleSendPrivateMessage(selectedUser._id.toString());
+      }
+    },
+    [HandleSendPrivateMessage],
+  );
+
+  const handleSendVoiceMessage = useCallback(
+    async (blobUrl) => {
+      if (!selectedUser?._id || !myUserId) return;
+
+      try {
+        const res = await fetch(blobUrl);
+        const blob = await res.blob();
+        const formData = new FormData();
+        formData.append("voice", blob);
+        const response = await axios.post(`${AppRoutes.uploadVoice}`, formData);
+        const voiceUrl = response.data.voiceUrl;
+        console.log("voiceUrl => ", voiceUrl);
+
+        const newMessage = {
+          senderId: myUserId,
+          recieverId: selectedUser._id,
+          voice: voiceUrl,
+          messageType: "voice",
+          time: new Date().toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+          }),
+        };
+
+        setMessages((prev) => [...prev, newMessage]);
+
+        socket.emit("private_message", {
+          receiverId: selectedUser._id,
+          message: newMessage,
+        });
+        GetUsers();
+      } catch (error) {
+        console.error("Error fetching voice message:", error);
+      }
+    },
+    [myUserId, message],
+  );
 
   return (
     <div className="flex h-screen bg-gray-100">
