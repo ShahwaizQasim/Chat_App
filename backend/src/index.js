@@ -55,7 +55,6 @@ io.on("connection", (socket) => {
       messageType: message.messageType,
       time: message.time,
       isRead: false,
-
     });
 
     // const unreadCount = await SavedMessage?.countDocuments({

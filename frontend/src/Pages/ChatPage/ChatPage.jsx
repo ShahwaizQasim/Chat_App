@@ -9,6 +9,7 @@ import Cookies from "js-cookie";
 import { useNavigate } from "react-router-dom";
 import { logout } from "../../redux/slices/userSlice";
 import ChatInputBar from "../../components/ChatInputBar";
+import Demo, { VoiceCallModal } from "../../components/modal/VoiceCallModal";
 
 const socket = io(PrivateVariables.BACKEND_URL);
 
@@ -20,6 +21,7 @@ const ChatInterface = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showMenu, setShowMenu] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const messagesContainerRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -225,6 +227,7 @@ const ChatInterface = () => {
   );
 
   return (
+    <>
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar - Users List */}
       <div className="w-1/3 bg-white border-r border-gray-200 flex flex-col">
@@ -331,7 +334,7 @@ const ChatInterface = () => {
                 </div>
               </div>
               <div className="relative flex items-center space-x-2">
-                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
+                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors" onClick={()=> setIsModalOpen(true)}>
                   <Phone className="w-5 h-5" />
                 </button>
                 <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors">
@@ -429,6 +432,10 @@ const ChatInterface = () => {
         )}
       </div>
     </div>
+    {
+      isModalOpen ? <Demo />: ""
+    }
+    </>
   );
 };
 

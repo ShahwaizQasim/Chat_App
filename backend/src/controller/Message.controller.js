@@ -72,7 +72,6 @@ const UploadVoice = async (req, res) => {
       message: "Internal Server Error",
     });
     console.log("voice api error", error);
-    
   }
 }
 

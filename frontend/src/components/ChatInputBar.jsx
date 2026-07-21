@@ -1,6 +1,6 @@
 import { ReactMediaRecorder } from "react-media-recorder";
 import { Mic, Square, Trash2, Send, X, Play, Pause } from "lucide-react";
-import { Waveform } from "./WaveForm";
+import { Waveform } from "./ui/WaveForm";
 import { memo } from "react";
 
 const ChatInputBar = memo(function ChatInputBar({

@@ -1,4 +1,4 @@
-import { useWaveform } from "../hooks/useWaveFrom.jsx";
+import {useWaveform} from "../../hooks/useWaveFrom.jsx"
 
 export function Waveform({ mediaBlobUrl }) {
   const peaks = useWaveform(mediaBlobUrl);

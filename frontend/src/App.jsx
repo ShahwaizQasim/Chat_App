@@ -14,6 +14,7 @@ import Cookies from "js-cookie";
 import { useEffect } from "react";
 import { jwtDecode } from "jwt-decode";
 import { login } from "./redux/slices/userSlice";
+import { Loader } from "./components/ui/Loader";
 const Login = lazy(() => import("./Pages/Auth/Login/Login"));
 const AuthForm = lazy(() => import("./Pages/Auth/SignUp/Signup"));
 
@@ -53,7 +54,7 @@ function App() {
 
   return (
     <>
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<Loader />}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/chatPage" element={<ChatInterface />} />

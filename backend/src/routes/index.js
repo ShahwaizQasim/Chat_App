@@ -12,7 +12,7 @@ router.use("/auth/signUp",
 
 router.use("/auth/login", UserLogin)
 
-router.get("/get/all_users",VerifyUser, UserGet)
+router.get("/get/all_users", VerifyUser, UserGet)
 
 router.get("/get/chat_message/:senderId/:recieverId", GetMessages)
 router.put("/messages/read/:senderId", VerifyUser, MarkMessagesAsRead);
