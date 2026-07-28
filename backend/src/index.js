@@ -43,7 +43,7 @@ io.on("connection", (socket) => {
 
   // Private message send
   socket.on("private_message", async ({ message, receiverId }) => {
-    console.log("Private Message:", message, "To:", receiverId);
+    // console.log("Private Message:", message, "To:", receiverId);
 
     // message save in mongodb
     let SavedMessage = await messageModel.create({

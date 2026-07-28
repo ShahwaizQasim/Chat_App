@@ -22,7 +22,6 @@ const MessageSchema = new Schema({
     type: String,
     default: ""
   },
-
   messageType: {
     type: String,
     enum: ["text", "image", "voice"],

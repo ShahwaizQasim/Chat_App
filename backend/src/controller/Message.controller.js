@@ -53,6 +53,7 @@ const MarkMessagesAsRead = async (req, res) => {
 const UploadVoice = async (req, res) => {
   try {
     let voiceFilePath = req.file.path;
+
     if (!voiceFilePath) {
       return res.status(400).send({
         status: 400,
@@ -75,8 +76,34 @@ const UploadVoice = async (req, res) => {
   }
 }
 
+const UploadFile = async (req, res) => {
+  try {
+    let UserFilePath = req.file.path;
+
+    if (!UserFilePath) {
+      return res.status(400).send({
+        status: 400,
+        message: "No voice file uploaded",
+      });
+    }
+    let FilePath = await uploadOnCloudinary(UserFilePath);
+    res.status(200).send({
+      status: 200,
+      message: "File uploaded successfully",
+      fileUrl: FilePath.url
+    });
+  } catch (error) {
+    res.status(500).send({
+      status: 500,
+      message: "Internal Server Error",
+    });
+    console.log("voice api error", error);
+  }
+}
+
 export {
   GetMessages,
   MarkMessagesAsRead,
-  UploadVoice
+  UploadVoice,
+  UploadFile
 }
