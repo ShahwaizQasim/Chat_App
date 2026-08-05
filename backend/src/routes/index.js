@@ -17,6 +17,6 @@ router.get("/get/all_users", VerifyUser, UserGet)
 router.get("/get/chat_message/:senderId/:recieverId", GetMessages)
 router.put("/messages/read/:senderId", VerifyUser, MarkMessagesAsRead);
 router.post("/upload-voice", upload.single("voice"), UploadVoice);
-router.post("/upload-file", upload.single("image"), UploadFile);
+router.post("/upload-file", upload.array("images", 10), UploadFile);
 
 export default router;

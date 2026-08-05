@@ -78,28 +78,38 @@ const UploadVoice = async (req, res) => {
 
 const UploadFile = async (req, res) => {
   try {
-    let UserFilePath = req.file.path;
+    const files = req.files;
 
-    if (!UserFilePath) {
+    if (!files || files.length === 0) {
       return res.status(400).send({
         status: 400,
-        message: "No voice file uploaded",
+        message: "No file uploaded",
       });
     }
-    let FilePath = await uploadOnCloudinary(UserFilePath);
-    res.status(200).send({
+
+    const fileUrls = [];
+
+    for (const file of files) {
+      const uploaded = await uploadOnCloudinary(file.path);
+
+      fileUrls.push(uploaded.url);
+    }
+
+    return res.status(200).send({
       status: 200,
-      message: "File uploaded successfully",
-      fileUrl: FilePath.url
+      message: "Files uploaded successfully",
+      fileUrls,
     });
+
   } catch (error) {
-    res.status(500).send({
+    console.log("Upload file error:", error);
+
+    return res.status(500).send({
       status: 500,
       message: "Internal Server Error",
     });
-    console.log("voice api error", error);
   }
-}
+};
 
 export {
   GetMessages,

@@ -45,13 +45,16 @@ io.on("connection", (socket) => {
   socket.on("private_message", async ({ message, receiverId }) => {
     // console.log("Private Message:", message, "To:", receiverId);
 
+    console.log("message:",  message);
+    
+
     // message save in mongodb
     let SavedMessage = await messageModel.create({
       senderId: message.senderId,
       recieverId: receiverId,
       text: message.text,
       voice: message.voice || "",
-      image: message.image || "",
+      image: message.images || [],
       messageType: message.messageType,
       time: message.time,
       isRead: false,

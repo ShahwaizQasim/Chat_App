@@ -10,6 +10,8 @@ import { useNavigate } from "react-router-dom";
 import { logout } from "../../redux/slices/userSlice";
 import ChatInputBar from "../../components/ChatInputBar";
 import Demo, { VoiceCallModal } from "../../components/modal/VoiceCallModal";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
 
 const socket = io(PrivateVariables.BACKEND_URL);
 
@@ -22,6 +24,10 @@ const ChatInterface = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const messagesContainerRef = useRef(null);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -228,22 +234,28 @@ const ChatInterface = () => {
       console.log("file===>", file);
 
       let formData = new FormData();
-      formData.append("image", file);
+      selectedFiles.forEach((file) => {
+        formData.append("images", file);
+      });
       let response = await axios.post(`${AppRoutes.uploadFile}`, formData);
       console.log("response", response);
 
-      let fileUrl = response.data.fileUrl;
+      let fileUrl = response.data.fileUrls;
+      console.log("fileUrl=> ", fileUrl);
+
       const newMessage = {
         senderId: myUserId,
         recieverId: selectedUser._id,
-        image: fileUrl,
+        images: fileUrl,
         messageType: "image",
+        text: message,
         time: new Date().toLocaleTimeString([], {
           hour: "numeric",
           minute: "2-digit",
           hour12: true,
         }),
       };
+      console.log("newMessage===>", newMessage);
       setMessages((prev) => [...prev, newMessage]);
       socket.emit("private_message", {
         receiverId: selectedUser._id,
@@ -255,6 +267,12 @@ const ChatInterface = () => {
       console.log(error);
     }
   });
+
+  const openLightbox = (images, startIndex) => {
+    setLightboxImages(images.map((url) => ({ src: url })));
+    setLightboxIndex(startIndex);
+    setLightboxOpen(true);
+  };
 
   return (
     <>
@@ -413,7 +431,7 @@ const ChatInterface = () => {
                       className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        className={`max-w-xs lg:max-w-md px-4 pt-2 rounded-lg ${
                           isMe
                             ? "bg-blue-500 text-white rounded-br-sm"
                             : "bg-white text-gray-800 rounded-bl-sm shadow-sm"
@@ -429,13 +447,63 @@ const ChatInterface = () => {
                           </div>
                         ) : msg.messageType === "image" ||
                           msg.type === "image" ? (
-                          <div className="rounded-2xl overflow-hidden bg-gray-100">
-                            <img
-                              src={msg.image || msg.file}
-                              alt="Sent"
-                              className="w-full h-auto object-cover"
-                            />
-                          </div>
+                          <>
+                            <div className="flex flex-col gap-2 rounded-2xl overflow-hidden bg-gray-100">
+                              {msg.images && msg.images.length === 1 ? (
+                                <img
+                                  src={msg.images[0]}
+                                  alt="Sent"
+                                  className="w-full h-auto object-cover rounded-2xl cursor-pointer"
+                                  onClick={() => openLightbox(msg.images, 0)}
+                                />
+                              ) : msg.images && msg.images.length > 1 ? (
+                                <div className="grid grid-cols-2 gap-1">
+                                  {msg.images.slice(0, 4).map((imgUrl, idx) => {
+                                    const remaining = msg.images.length - 4;
+                                    const isLastVisible =
+                                      idx === 3 && msg.images.length > 4;
+
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="relative cursor-pointer"
+                                        onClick={() =>
+                                          openLightbox(msg.images, idx)
+                                        }
+                                      >
+                                        <img
+                                          src={imgUrl}
+                                          alt={`Sent ${idx + 1}`}
+                                          className="w-full h-32 object-cover rounded-md"
+                                        />
+                                        {isLastVisible && remaining > 0 && (
+                                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                                            <span className="text-white text-lg font-semibold">
+                                              +{remaining}
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <img
+                                  src={msg.image || msg.file}
+                                  alt="Sent"
+                                  className="w-full h-auto object-cover cursor-pointer"
+                                  onClick={() =>
+                                    openLightbox([msg.image || msg.file], 0)
+                                  }
+                                />
+                              )}
+                              {msg.text && (
+                                <p className="text-sm px-2 pb-2 text-gray-800">
+                                  {msg.text}
+                                </p>
+                              )}
+                            </div>
+                          </>
                         ) : (
                           <p className="text-sm">{msg.text}</p>
                         )}
@@ -459,6 +527,8 @@ const ChatInterface = () => {
                 HandleSendPrivateMessage={HandleSendPrivateMessage}
                 handleSendVoiceMessage={handleSendVoiceMessage}
                 handleSendFileMessage={handleSendFileMessage}
+                setSelectedFiles={setSelectedFiles}
+                selectedFiles={selectedFiles}
               />
             </>
           ) : (
@@ -480,6 +550,12 @@ const ChatInterface = () => {
         </div>
       </div>
       {isModalOpen ? <Demo /> : ""}
+      <Lightbox
+        open={lightboxOpen}
+        close={() => setLightboxOpen(false)}
+        slides={lightboxImages}
+        index={lightboxIndex}
+      />
     </>
   );
 };

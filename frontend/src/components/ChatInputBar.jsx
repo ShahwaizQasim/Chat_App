@@ -1,8 +1,19 @@
 import { ReactMediaRecorder } from "react-media-recorder";
-import { Mic, Square, Trash2, Send, X, Play, Pause, Smile, Plus, FileText } from "lucide-react";
+import {
+  Mic,
+  Square,
+  Trash2,
+  Send,
+  X,
+  Play,
+  Pause,
+  Smile,
+  Plus,
+  FileText,
+} from "lucide-react";
 import { Waveform } from "./ui/WaveForm";
 import { memo, useState, useRef, useEffect, useCallback } from "react";
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker from "emoji-picker-react";
 
 const ChatInputBar = memo(function ChatInputBar({
   message,
@@ -12,16 +23,14 @@ const ChatInputBar = memo(function ChatInputBar({
   HandleSendPrivateMessage, // (userId) => void — used for text-only sends
   handleSendVoiceMessage, // (blobUrl) => void — wire this to your upload logic
   handleSendFileMessage, // (file, message, userId) => void — wire this to your upload logic
+  setSelectedFiles,
+  selectedFiles,
 }) {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-
   const inputRef = useRef(null);
   const pickerRef = useRef(null);
   const emojiButtonRef = useRef(null);
   const fileInputRef = useRef(null);
-  // Tracks where the caret was last, so we still know where to insert
-  // after the input has lost focus to the picker.
   const cursorPosRef = useRef(0);
 
   const updateCursorPos = useCallback(() => {
@@ -29,6 +38,8 @@ const ChatInputBar = memo(function ChatInputBar({
       cursorPosRef.current = inputRef.current.selectionStart ?? message.length;
     }
   }, [message.length]);
+
+  console.log("selectedFiles", selectedFiles);
 
   // Close the picker on outside click
   useEffect(() => {
@@ -84,51 +95,61 @@ const ChatInputBar = memo(function ChatInputBar({
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) setSelectedFile(file);
+    const files = Array.from(e.target.files);
+
+    if (files.length) {
+      setSelectedFiles(files);
+    }
     // reset so selecting the same file again still fires onChange
     e.target.value = "";
   };
 
-  const clearSelectedFile = () => setSelectedFile(null);
+  const clearSelectedFile = () => setSelectedFiles(null);
 
   const handleSend = () => {
-    if (selectedFile) {
-      handleSendFileMessage?.(selectedFile);
-      setSelectedFile(null);
+    if (selectedFiles) {
+      handleSendFileMessage?.(selectedFiles);
+      setSelectedFiles(null);
       setMessage("");
       return;
     }
     HandleSendPrivateMessage(selectedUser._id);
   };
 
-  const isImageFile = selectedFile && selectedFile.type?.startsWith("image/");
+  const isImageFile =
+    selectedFiles?.length > 0 && selectedFiles[0].type?.startsWith("image/");
   const [filePreviewUrl, setFilePreviewUrl] = useState(null);
 
   useEffect(() => {
     if (isImageFile) {
-      const url = URL.createObjectURL(selectedFile);
+      const url = URL.createObjectURL(selectedFiles[0]);
+      console.log(url);
       setFilePreviewUrl(url);
       return () => URL.revokeObjectURL(url);
     }
     setFilePreviewUrl(null);
-  }, [selectedFile, isImageFile]);
+  }, [selectedFiles, isImageFile]);
 
   return (
     <div className="bg-white p-4 border-t border-gray-200">
-      {selectedFile && (
+      {selectedFiles && (
         <div className="flex items-center gap-3 mb-2 rounded-lg bg-gray-100 px-3 py-2">
           {isImageFile ? (
-            <img
-              src={filePreviewUrl}
-              alt={selectedFile.name}
-              className="h-10 w-10 rounded object-cover"
-            />
+            <div className="flex gap-2 flex-wrap">
+              {selectedFiles.length > 0 && selectedFiles.map((file, index) => (
+                <img
+                  key={index}
+                  src={URL.createObjectURL(file)}
+                  alt={file.name}
+                  className="w-10 h-10 rounded object-cover"
+                />
+              ))}
+            </div>
           ) : (
             <FileText size={22} className="text-gray-500 shrink-0" />
           )}
           <span className="flex-1 truncate text-sm text-gray-700">
-            {selectedFile.name}
+            {selectedFiles.name}
           </span>
           <button
             onClick={clearSelectedFile}
@@ -144,6 +165,7 @@ const ChatInputBar = memo(function ChatInputBar({
         <input
           ref={fileInputRef}
           type="file"
+          multiple
           className="hidden"
           onChange={handleFileChange}
         />
@@ -266,13 +288,13 @@ const ChatInputBar = memo(function ChatInputBar({
         <button
           onClick={handleSend}
           className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
-          disabled={!message.trim() && !selectedFile}
+          disabled={!message.trim() && !selectedFiles}
         >
           <Send className="w-5 h-5" />
         </button>
       </div>
     </div>
   );
-})
+});
 
 export default ChatInputBar;
